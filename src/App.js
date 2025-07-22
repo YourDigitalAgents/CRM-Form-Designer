@@ -256,6 +256,7 @@ const App = () => {
     const [copyMessage, setCopyMessage] = useState('');
 
     // States for AI features
+    const [apiProvider, setApiProvider] = useState('gemini');
     const [userApiKey, setUserApiKey] = useState('');
     const [colorGenerationMethod, setColorGenerationMethod] = useState('mood');
     const [colorMood, setColorMood] = useState('');
@@ -280,41 +281,93 @@ const App = () => {
 
     // --- AI-Powered Generation Functions ---
 
-    // Generic function to call the Gemini API
-    const callGeminiAPI = async (prompt, responseSchema) => {
-        const payload = {
-            contents: [{ role: "user", parts: [{ text: prompt }] }],
-            generationConfig: {
-                responseMimeType: "application/json",
-                responseSchema: responseSchema,
-            },
-        };
-        const apiKey = userApiKey || ""; // Use user-provided key, or fallback
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+    // Generic function to call the selected AI API
+    const callGenerativeAPI = async (prompt, responseSchema) => {
+        let apiUrl = '';
+        let headers = {};
+        let payload = {};
+        let modifiedPrompt = prompt;
+
+        switch (apiProvider) {
+            case 'openai':
+                apiUrl = 'https://api.openai.com/v1/chat/completions';
+                headers = {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${userApiKey}`
+                };
+                modifiedPrompt = `${prompt}. Respond ONLY with a valid JSON object that conforms to this schema: ${JSON.stringify(responseSchema)}`;
+                payload = {
+                    model: 'gpt-4o',
+                    messages: [{ role: 'user', content: modifiedPrompt }],
+                    response_format: { type: 'json_object' }
+                };
+                break;
+            case 'claude':
+                apiUrl = 'https://api.anthropic.com/v1/messages';
+                headers = {
+                    'Content-Type': 'application/json',
+                    'x-api-key': userApiKey,
+                    'anthropic-version': '2023-06-01'
+                };
+                modifiedPrompt = `${prompt}. Respond ONLY with a valid JSON object that conforms to this schema: ${JSON.stringify(responseSchema)}. Do not include any other text or explanations.`;
+                payload = {
+                    model: 'claude-3-haiku-20240307',
+                    max_tokens: 2048,
+                    messages: [{ role: 'user', content: modifiedPrompt }]
+                };
+                break;
+            case 'gemini':
+            default:
+                apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${userApiKey || ""}`;
+                headers = { 'Content-Type': 'application/json' };
+                payload = {
+                    contents: [{ role: "user", parts: [{ text: prompt }] }],
+                    generationConfig: {
+                        responseMimeType: "application/json",
+                        responseSchema: responseSchema,
+                    },
+                };
+                break;
+        }
 
         const response = await fetch(apiUrl, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: headers,
             body: JSON.stringify(payload),
         });
 
         if (!response.ok) {
-            throw new Error(`API call failed with status: ${response.status}`);
+            const errorBody = await response.json();
+            console.error("API Error:", errorBody);
+            throw new Error(`API call failed with status: ${response.status}. ${errorBody.error?.message || ''}`);
         }
         
         const result = await response.json();
 
-        if (result.candidates && result.candidates.length > 0 && result.candidates[0].content && result.candidates[0].content.parts.length > 0) {
-            try {
-                return JSON.parse(result.candidates[0].content.parts[0].text);
-            } catch (e) {
-                throw new Error("Failed to parse JSON response from API.");
-            }
-        } else {
-            if (result.candidates && result.candidates[0].finishReason === 'SAFETY') {
-                 throw new Error("The request was blocked for safety reasons.");
-            }
-            throw new Error("Invalid response structure from API.");
+        // Parse the response based on the provider's structure
+        let jsonText;
+        switch(apiProvider) {
+            case 'openai':
+                jsonText = result.choices[0].message.content;
+                break;
+            case 'claude':
+                jsonText = result.content[0].text;
+                break;
+            case 'gemini':
+            default:
+                 if (result.candidates && result.candidates[0].content && result.candidates[0].content.parts.length > 0) {
+                    jsonText = result.candidates[0].content.parts[0].text;
+                } else {
+                    throw new Error("Invalid response structure from Gemini API.");
+                }
+                break;
+        }
+        
+        try {
+            return JSON.parse(jsonText);
+        } catch (e) {
+            console.error("Failed to parse JSON response:", jsonText);
+            throw new Error("Failed to parse JSON response from API.");
         }
     };
 
@@ -349,7 +402,7 @@ const App = () => {
                 },
                 required: ["primaryColor", "primaryFontColor", "backgroundColor", "labelColor", "inputTextColor"]
             };
-            const colors = await callGeminiAPI(prompt, schema);
+            const colors = await callGenerativeAPI(prompt, schema);
             setFormData(prev => ({ ...prev, ...colors }));
         } catch (error) {
             console.error("Color generation failed:", error);
@@ -399,7 +452,7 @@ const App = () => {
                 },
                 required: ["titles", "buttonTexts", "fieldSuggestions"]
             };
-            const suggestions = await callGeminiAPI(prompt, schema);
+            const suggestions = await callGenerativeAPI(prompt, schema);
             setGeneratedContent(suggestions);
         } catch (error) {
             console.error("Content generation failed:", error);
@@ -627,6 +680,21 @@ ${formHtml}
                 <Accordion id="ai" title="✨ AI" openAccordion={openAccordion} setOpenAccordion={setOpenAccordion}>
                     {/* API Key Input */}
                     <div className="mb-6 border-b border-gray-200 pb-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">AI Provider</label>
+                        <div className="flex gap-4 mb-2">
+                           <label className="flex items-center">
+                                <input type="radio" name="apiProvider" value="gemini" checked={apiProvider === 'gemini'} onChange={(e) => setApiProvider(e.target.value)} className="form-radio h-4 w-4 text-indigo-600"/>
+                                <span className="ml-2 text-sm text-gray-700">Gemini</span>
+                            </label>
+                             <label className="flex items-center">
+                                <input type="radio" name="apiProvider" value="openai" checked={apiProvider === 'openai'} onChange={(e) => setApiProvider(e.target.value)} className="form-radio h-4 w-4 text-indigo-600"/>
+                                <span className="ml-2 text-sm text-gray-700">OpenAI</span>
+                            </label>
+                             <label className="flex items-center">
+                                <input type="radio" name="apiProvider" value="claude" checked={apiProvider === 'claude'} onChange={(e) => setApiProvider(e.target.value)} className="form-radio h-4 w-4 text-indigo-600"/>
+                                <span className="ml-2 text-sm text-gray-700">Claude</span>
+                            </label>
+                        </div>
                         <label htmlFor="apiKey" className="block text-sm font-medium text-gray-700 mb-1">Your AI API Key</label>
                         <input
                             type="password"
@@ -636,7 +704,7 @@ ${formHtml}
                             className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                             placeholder="Paste your API key here"
                         />
-                         <p className="text-xs text-gray-500 mt-1">Note: This tool is configured for the Google Gemini API format.</p>
+                         <p className="text-xs text-gray-500 mt-1">Note: Ensure your key matches the selected provider.</p>
                     </div>
 
                     {/* Unified AI Color Generator */}

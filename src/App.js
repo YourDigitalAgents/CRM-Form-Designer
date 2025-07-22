@@ -297,7 +297,7 @@ const App = () => {
                 };
                 modifiedPrompt = `${prompt}. Respond ONLY with a valid JSON object that conforms to this schema: ${JSON.stringify(responseSchema)}`;
                 payload = {
-                    model: 'gpt-4o',
+                    model: 'gpt-4o-mini',
                     messages: [{ role: 'user', content: modifiedPrompt }],
                     response_format: { type: 'json_object' }
                 };

@@ -256,7 +256,6 @@ const App = () => {
     const [copyMessage, setCopyMessage] = useState('');
 
     // States for AI features
-    const [isPuterLoggedIn, setIsPuterLoggedIn] = useState(false);
     const [colorGenerationMethod, setColorGenerationMethod] = useState('mood');
     const [colorMood, setColorMood] = useState('');
     const [colorCode, setColorCode] = useState('');
@@ -278,60 +277,43 @@ const App = () => {
     const [previewWidth, setPreviewWidth] = useState('100%');
     const [openAccordion, setOpenAccordion] = useState('custom-script');
 
-    // --- Puter.js Integration ---
-    useEffect(() => {
-        const script = document.createElement('script');
-        script.src = 'https://puter.com/sdk.js';
-        script.onload = async () => {
-            const loggedIn = await window.puter.auth.isLoggedIn();
-            setIsPuterLoggedIn(loggedIn);
-        };
-        document.body.appendChild(script);
-        return () => {
-            document.body.removeChild(script);
-        };
-    }, []);
-
-    const handlePuterLogin = async () => {
-        try {
-            await window.puter.auth.login();
-            setIsPuterLoggedIn(true);
-        } catch (error) {
-            console.error("Puter login failed:", error);
-        }
-    };
-
-    const handlePuterLogout = async () => {
-        try {
-            await window.puter.auth.logout();
-            setIsPuterLoggedIn(false);
-        } catch (error) {
-            console.error("Puter logout failed:", error);
-        }
-    };
-
     // --- AI-Powered Generation Functions ---
 
-    // Generic function to call the Puter AI API
-    const callPuterAI = async (prompt, schema) => {
-        if (!isPuterLoggedIn) {
-            throw new Error("Please log in with Puter to use AI features.");
+    // Generic function to call the Gemini API
+    const callGeminiAPI = async (prompt, responseSchema) => {
+        const payload = {
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+            generationConfig: {
+                responseMimeType: "application/json",
+                responseSchema: responseSchema,
+            },
+        };
+        const apiKey = ""; // No API key needed for this implementation
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+            throw new Error(`API call failed with status: ${response.status}`);
         }
         
-        const modifiedPrompt = `${prompt}. Respond ONLY with a valid JSON object that conforms to this schema: ${JSON.stringify(schema)}. Do not include any other text, explanations, or markdown formatting.`;
+        const result = await response.json();
 
-        try {
-            const result = await window.puter.ai.run({
-                model: 'gemini-flash', // Or another model supported by Puter
-                prompt: modifiedPrompt,
-            });
-
-            // Clean up potential markdown code block
-            const cleanedResult = result.replace(/```json\n?|```/g, '').trim();
-            return JSON.parse(cleanedResult);
-        } catch (error) {
-            console.error("Puter AI call failed:", error);
-            throw new Error("Failed to get a valid response from the AI.");
+        if (result.candidates && result.candidates.length > 0 && result.candidates[0].content && result.candidates[0].content.parts.length > 0) {
+            try {
+                return JSON.parse(result.candidates[0].content.parts[0].text);
+            } catch (e) {
+                throw new Error("Failed to parse JSON response from API.");
+            }
+        } else {
+            if (result.candidates && result.candidates[0].finishReason === 'SAFETY') {
+                 throw new Error("The request was blocked for safety reasons.");
+            }
+            throw new Error("Invalid response structure from API.");
         }
     };
 
@@ -366,7 +348,7 @@ const App = () => {
                 },
                 required: ["primaryColor", "primaryFontColor", "backgroundColor", "labelColor", "inputTextColor"]
             };
-            const colors = await callPuterAI(prompt, schema);
+            const colors = await callGeminiAPI(prompt, schema);
             setFormData(prev => ({ ...prev, ...colors }));
         } catch (error) {
             console.error("Color generation failed:", error);
@@ -416,7 +398,7 @@ const App = () => {
                 },
                 required: ["titles", "buttonTexts", "fieldSuggestions"]
             };
-            const suggestions = await callPuterAI(prompt, schema);
+            const suggestions = await callGeminiAPI(prompt, schema);
             setGeneratedContent(suggestions);
         } catch (error) {
             console.error("Content generation failed:", error);
@@ -642,22 +624,9 @@ ${formHtml}
                 </Accordion>
 
                 <Accordion id="ai" title="✨ AI" openAccordion={openAccordion} setOpenAccordion={setOpenAccordion}>
-                    {/* Puter.js Login */}
                     <div className="mb-6 border-b border-gray-200 pb-4">
-                         <h4 className="text-md font-semibold text-gray-800 mb-2">Puter.js AI</h4>
-                         {isPuterLoggedIn ? (
-                             <div className="flex items-center justify-between">
-                                 <p className="text-sm text-green-600">Logged in to Puter.</p>
-                                 <button onClick={handlePuterLogout} className="text-sm text-red-500 hover:underline">Logout</button>
-                             </div>
-                         ) : (
-                            <>
-                                <p className="text-sm text-gray-600 mb-3">Login with your Puter account to use free AI features without an API key.</p>
-                                <button onClick={handlePuterLogin} className="w-full bg-blue-600 text-white py-2 px-4 rounded-md font-semibold hover:bg-blue-700 transition-colors shadow">
-                                    Login with Puter
-                                </button>
-                            </>
-                         )}
+                         <h4 className="text-md font-semibold text-gray-800 mb-2">Free AI Assistant</h4>
+                         <p className="text-sm text-gray-600">Powered by a free, open-source accessible model. No API key needed.</p>
                     </div>
 
                     {/* Unified AI Color Generator */}
@@ -699,7 +668,7 @@ ${formHtml}
                         )}
                         
                         {colorError && <p className="text-red-600 text-sm mt-2">{colorError}</p>}
-                        <button onClick={handleGenerateColors} disabled={!isPuterLoggedIn || isGeneratingColors} className="mt-3 w-full bg-purple-600 text-white py-2 px-4 rounded-md font-semibold hover:bg-purple-700 transition-colors shadow disabled:opacity-50 flex items-center justify-center">
+                        <button onClick={handleGenerateColors} disabled={isGeneratingColors} className="mt-3 w-full bg-purple-600 text-white py-2 px-4 rounded-md font-semibold hover:bg-purple-700 transition-colors shadow disabled:opacity-50 flex items-center justify-center">
                             {isGeneratingColors ? <svg className="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" className="opacity-25"></circle><path d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" className="opacity-75" fill="currentColor"></path></svg> : '✨ Generate Palette'}
                         </button>
                     </div>
@@ -716,7 +685,7 @@ ${formHtml}
                             onChange={(e) => setContentPurpose(e.target.value)}
                         />
                         {contentError && <p className="text-red-600 text-sm mt-2">{contentError}</p>}
-                        <button onClick={generateAllContent} disabled={!isPuterLoggedIn || isGeneratingContent} className="mt-3 w-full bg-blue-600 text-white py-2 px-4 rounded-md font-semibold hover:bg-blue-700 transition-colors shadow disabled:opacity-50 flex items-center justify-center">
+                        <button onClick={generateAllContent} disabled={isGeneratingContent} className="mt-3 w-full bg-blue-600 text-white py-2 px-4 rounded-md font-semibold hover:bg-blue-700 transition-colors shadow disabled:opacity-50 flex items-center justify-center">
                             {isGeneratingContent ? <svg className="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" className="opacity-25"></circle><path d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" className="opacity-75" fill="currentColor"></path></svg> : '✨ Generate All Content'}
                         </button>
                         {generatedContent && (

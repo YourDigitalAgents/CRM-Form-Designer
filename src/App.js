@@ -161,7 +161,7 @@ const FormPreview = React.memo(React.forwardRef(({ script, onElementClick, style
         return () => clearTimeout(timeoutId);
     }, [styles, ref]);
 
-    return <iframe ref={ref} className="w-full border-0" style={{ minHeight: '500px' }}></iframe>;
+    return <iframe ref={ref} title="Form Preview" className="w-full border-0" style={{ minHeight: '500px' }}></iframe>;
 }));
 
 
@@ -304,7 +304,7 @@ const App = () => {
             let c;
             if(/^#([A-Fa-f0-9]{3}){1,2}$/.test(hex)){
                 c= hex.substring(1).split('');
-                if(c.length== 3){ c= [c[0], c[0], c[1], c[1], c[2], c[2]]; }
+                if(c.length === 3){ c= [c[0], c[0], c[1], c[1], c[2], c[2]]; }
                 c= '0x'+c.join('');
                 return `rgba(${[(c>>16)&255, (c>>8)&255, c&255].join(',')},${opacity})`;
             }

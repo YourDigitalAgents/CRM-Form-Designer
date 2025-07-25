@@ -301,6 +301,7 @@ const App = () => {
                   width: calc(${widthPercentage}% - 8px) !important;
                   margin-bottom: 16px;
                       /*margin-right: 16px;*/
+                          margin-left: 16px !important;
               }
             `;
         }

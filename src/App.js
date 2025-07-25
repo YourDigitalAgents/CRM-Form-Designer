@@ -295,7 +295,7 @@ const App = () => {
             layoutCss += `
               #form-widget-container [data-element-id="${id}"] {
                   width: calc(${widthPercentage}% - 8px) !important;
-                  margin: 0px 0px 16px 0px !important;
+                  margin: 4px !important;
               }
             `;
         }
@@ -394,6 +394,13 @@ const App = () => {
         const finalHtml = `<style>${generateCss()}</style>\n<div id="form-widget-container">${formHtml}</div>`;
         setGeneratedHtml(finalHtml);
         setShowCodeModal(true);
+    };
+
+    const showCopyMessage = (message) => {
+        setCopyMessage(message);
+        setTimeout(() => {
+            setCopyMessage('');
+        }, 3000);
     };
 
     const copyToClipboard = () => {

@@ -96,6 +96,10 @@ const FormPreview = React.memo(React.forwardRef(({ script, onElementClick, style
                 });
                 ro.observe(document.body);
 
+                // This observer will keep watching for changes, ensuring controls are added even to late-loading elements.
+                const observer = new MutationObserver(addEditingControls);
+                observer.observe(document.body, { childList: true, subtree: true });
+
                 addEditingControls(); // Initial run
             <\/script>
         </body>
@@ -295,7 +299,7 @@ const App = () => {
             layoutCss += `
               #form-widget-container [data-element-id="${id}"] {
                   width: calc(${widthPercentage}% - 8px) !important;
-                  margin: 4px !important;
+                  margin: 0px 0px 16px 0px !important;
               }
             `;
         }

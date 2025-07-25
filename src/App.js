@@ -299,7 +299,8 @@ const App = () => {
             layoutCss += `
               #form-widget-container [data-element-id="${id}"] {
                   width: calc(${widthPercentage}% - 8px) !important;
-                  margin: 0px 0px 16px 0px !important;
+                  margin-bottom: 16px;
+                      margin-right: 16px;
               }
             `;
         }

@@ -300,7 +300,7 @@ const App = () => {
               #form-widget-container [data-element-id="${id}"] {
                   width: calc(${widthPercentage}% - 8px) !important;
                   margin-bottom: 16px;
-                      margin-right: 16px;
+                      /*margin-right: 16px;*/
               }
             `;
         }

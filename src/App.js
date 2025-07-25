@@ -297,7 +297,7 @@ const App = () => {
             const sizePreset = fieldLayouts[id];
             const widthPercentage = widthMap[sizePreset] || 100;
             layoutCss += `
-              #form-widget-container [data-element-id="${id}"] {
+              #form-widget-container [data-element-id="editable-2"]:nth-child(even) {
                   width: calc(${widthPercentage}% - 8px) !important;
                   margin-bottom: 16px;
                       /*margin-right: 16px;*/

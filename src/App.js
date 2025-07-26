@@ -96,6 +96,9 @@ const FormPreview = React.memo(React.forwardRef(({ script, onElementClick, style
                 });
                 ro.observe(document.body);
 
+                const observer = new MutationObserver(addEditingControls);
+                observer.observe(document.body, { childList: true, subtree: true });
+
                 addEditingControls(); // Initial run
             <\/script>
         </body>
@@ -334,7 +337,7 @@ const App = () => {
                 vertical-align: top;
                 width: 100%;
                 font-size: 1rem;
-                margin-bottom: 16px;
+                margin: 0 0 16px 0;
                 padding: 0 4px;
                 box-sizing: border-box;
             }

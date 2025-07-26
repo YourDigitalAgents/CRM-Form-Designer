@@ -96,10 +96,6 @@ const FormPreview = React.memo(React.forwardRef(({ script, onElementClick, style
                 });
                 ro.observe(document.body);
 
-                // This observer will keep watching for changes, ensuring controls are added even to late-loading elements.
-                const observer = new MutationObserver(addEditingControls);
-                observer.observe(document.body, { childList: true, subtree: true });
-
                 addEditingControls(); // Initial run
             <\/script>
         </body>
@@ -298,15 +294,7 @@ const App = () => {
             const widthPercentage = widthMap[sizePreset] || 100;
             layoutCss += `
               #form-widget-container [data-element-id="${id}"] {
-                  width: calc(${widthPercentage}% - 8px) !important;
-                  margin-bottom: 16px;
-                      /*margin-right: 16px;*/
-              }
-               #form-widget-container [data-element-id="${id}"]:nth-child(even) {
-                  width: calc(${widthPercentage}% - 8px) !important;
-                  margin-bottom: 16px;
-                      /*margin-right: 16px;*/
-                          margin-left: 16px !important;
+                  width: ${widthPercentage}% !important;
               }
             `;
         }
@@ -347,6 +335,8 @@ const App = () => {
                 width: 100%;
                 font-size: 1rem;
                 margin-bottom: 16px;
+                padding: 0 4px;
+                box-sizing: border-box;
             }
             ${layoutCss}
             #form-widget-container input, #form-widget-container textarea {
@@ -495,73 +485,68 @@ const App = () => {
                         
                         <div className="p-4 flex-grow overflow-y-auto custom-scrollbar">
                             {editingTarget.type === 'container' && (
-                                <div>
-                                    <div className="flex border-b mb-2">
-                                        {['Container', 'Spacing', 'Labels', 'Inputs'].map(tab => (
-                                            <button key={tab} onClick={() => setActivePopupTab(tab.toLowerCase())} className={`text-xs px-3 py-1 ${activePopupTab === tab.toLowerCase() ? 'border-b-2 border-indigo-500 font-semibold' : 'text-gray-500'}`}>{tab}</button>
-                                        ))}
-                                    </div>
-                                    <div className="space-y-4">
-                                        {activePopupTab === 'container' && (
-                                            <>
-                                                <ColorPicker label="Background" name="backgroundColor" value={formData.backgroundColor} onChange={handleStyleChange} />
-                                                <RangeSlider label="Opacity" name="backgroundColorOpacity" value={formData.backgroundColorOpacity} onChange={handleStyleChange} min="0" max="1" step="0.05" />
-                                                <hr/>
-                                                <ColorPicker label="Border Color" name="borderColor" value={formData.borderColor} onChange={handleStyleChange} />
-                                                <RangeSlider label="Border Top" name="borderTopWidth" value={formData.borderTopWidth} onChange={handleStyleChange} min="0" max="20" step="1" unit="px" />
-                                                <RangeSlider label="Border Right" name="borderRightWidth" value={formData.borderRightWidth} onChange={handleStyleChange} min="0" max="20" step="1" unit="px" />
-                                                <RangeSlider label="Border Bottom" name="borderBottomWidth" value={formData.borderBottomWidth} onChange={handleStyleChange} min="0" max="20" step="1" unit="px" />
-                                                <RangeSlider label="Border Left" name="borderLeftWidth" value={formData.borderLeftWidth} onChange={handleStyleChange} min="0" max="20" step="1" unit="px" />
-                                                <hr/>
-                                                <p className="text-sm font-semibold">Border Radius</p>
-                                                <RangeSlider label="Top Left" name="containerBorderTopLeftRadius" value={formData.containerBorderTopLeftRadius} onChange={handleStyleChange} min="0" max="50" step="1" unit="px" />
-                                                <RangeSlider label="Top Right" name="containerBorderTopRightRadius" value={formData.containerBorderTopRightRadius} onChange={handleStyleChange} min="0" max="50" step="1" unit="px" />
-                                                <RangeSlider label="Bottom Right" name="containerBorderBottomRightRadius" value={formData.containerBorderBottomRightRadius} onChange={handleStyleChange} min="0" max="50" step="1" unit="px" />
-                                                <RangeSlider label="Bottom Left" name="containerBorderBottomLeftRadius" value={formData.containerBorderBottomLeftRadius} onChange={handleStyleChange} min="0" max="50" step="1" unit="px" />
-                                                <hr/>
-                                                <ColorPicker label="Shadow Color" name="boxShadowColor" value={formData.boxShadowColor} onChange={handleStyleChange} />
-                                                <RangeSlider label="H-Offset" name="boxShadowHOffset" value={formData.boxShadowHOffset} onChange={handleStyleChange} min="-20" max="20" step="1" unit="px" />
-                                                <RangeSlider label="V-Offset" name="boxShadowVOffset" value={formData.boxShadowVOffset} onChange={handleStyleChange} min="-20" max="20" step="1" unit="px" />
-                                                <RangeSlider label="Blur" name="boxShadowBlur" value={formData.boxShadowBlur} onChange={handleStyleChange} min="0" max="40" step="1" unit="px" />
-                                                <RangeSlider label="Spread" name="boxShadowSpread" value={formData.boxShadowSpread} onChange={handleStyleChange} min="-20" max="20" step="1" unit="px" />
-                                            </>
-                                        )}
-                                        {activePopupTab === 'spacing' && (
-                                            <>
-                                                <p className="text-sm font-semibold">Padding</p>
-                                                <RangeSlider label="Top" name="paddingTop" value={formData.paddingTop} onChange={handleStyleChange} min="0" max="50" step="1" unit="px" />
-                                                <RangeSlider label="Right" name="paddingRight" value={formData.paddingRight} onChange={handleStyleChange} min="0" max="50" step="1" unit="px" />
-                                                <RangeSlider label="Bottom" name="paddingBottom" value={formData.paddingBottom} onChange={handleStyleChange} min="0" max="50" step="1" unit="px" />
-                                                <RangeSlider label="Left" name="paddingLeft" value={formData.paddingLeft} onChange={handleStyleChange} min="0" max="50" step="1" unit="px" />
-                                                <hr/>
-                                                <p className="text-sm font-semibold">Margin</p>
-                                                <RangeSlider label="Top" name="marginTop" value={formData.marginTop} onChange={handleStyleChange} min="0" max="50" step="1" unit="px" />
-                                                <RangeSlider label="Right" name="marginRight" value={formData.marginRight} onChange={handleStyleChange} min="0" max="50" step="1" unit="px" />
-                                                <RangeSlider label="Bottom" name="marginBottom" value={formData.marginBottom} onChange={handleStyleChange} min="0" max="50" step="1" unit="px" />
-                                                <RangeSlider label="Left" name="marginLeft" value={formData.marginLeft} onChange={handleStyleChange} min="0" max="50" step="1" unit="px" />
-                                            </>
-                                        )}
-                                         {activePopupTab === 'labels' && (
-                                            <>
-                                                <ColorPicker label="Text Color" name="labelColor" value={formData.labelColor} onChange={handleStyleChange} />
-                                                <RangeSlider label="Font Size" name="labelFontSize" value={formData.labelFontSize} onChange={handleStyleChange} min="8" max="24" step="1" unit="px" />
-                                            </>
-                                        )}
-                                         {activePopupTab === 'inputs' && (
-                                            <>
-                                                <ColorPicker label="Background" name="inputBackgroundColor" value={formData.inputBackgroundColor} onChange={handleStyleChange} />
-                                                <ColorPicker label="Border" name="inputBorderColor" value={formData.inputBorderColor} onChange={handleStyleChange} />
-                                                <ColorPicker label="Text" name="inputTextColor" value={formData.inputTextColor} onChange={handleStyleChange} />
-                                                <RangeSlider label="Font Size" name="inputFontSize" value={formData.inputFontSize} onChange={handleStyleChange} min="8" max="24" step="1" unit="px" />
-                                                 <hr/>
-                                                <p className="text-sm font-semibold">Border Radius</p>
-                                                <RangeSlider label="Top Left" name="inputBorderTopLeftRadius" value={formData.inputBorderTopLeftRadius} onChange={handleStyleChange} min="0" max="50" step="1" unit="px" />
-                                                <RangeSlider label="Top Right" name="inputBorderTopRightRadius" value={formData.inputBorderTopRightRadius} onChange={handleStyleChange} min="0" max="50" step="1" unit="px" />
-                                                <RangeSlider label="Bottom Right" name="inputBorderBottomRightRadius" value={formData.inputBorderBottomRightRadius} onChange={handleStyleChange} min="0" max="50" step="1" unit="px" />
-                                                <RangeSlider label="Bottom Left" name="inputBorderBottomLeftRadius" value={formData.inputBorderBottomLeftRadius} onChange={handleStyleChange} min="0" max="50" step="1" unit="px" />
-                                            </>
-                                        )}
-                                    </div>
+                                <div className="p-2">
+                                    <PopupAccordionItem title="Container" id="container">
+                                        <div className="space-y-4">
+                                            <ColorPicker label="Background" name="backgroundColor" value={formData.backgroundColor} onChange={handleStyleChange} />
+                                            <RangeSlider label="Opacity" name="backgroundColorOpacity" value={formData.backgroundColorOpacity} onChange={handleStyleChange} min="0" max="1" step="0.05" />
+                                            <hr/>
+                                            <p className="text-sm font-semibold">Border</p>
+                                            <ColorPicker label="Color" name="borderColor" value={formData.borderColor} onChange={handleStyleChange} />
+                                            <RangeSlider label="Top" name="borderTopWidth" value={formData.borderTopWidth} onChange={handleStyleChange} min="0" max="20" step="1" unit="px" />
+                                            <RangeSlider label="Right" name="borderRightWidth" value={formData.borderRightWidth} onChange={handleStyleChange} min="0" max="20" step="1" unit="px" />
+                                            <RangeSlider label="Bottom" name="borderBottomWidth" value={formData.borderBottomWidth} onChange={handleStyleChange} min="0" max="20" step="1" unit="px" />
+                                            <RangeSlider label="Left" name="borderLeftWidth" value={formData.borderLeftWidth} onChange={handleStyleChange} min="0" max="20" step="1" unit="px" />
+                                            <hr/>
+                                            <p className="text-sm font-semibold">Border Radius</p>
+                                            <RangeSlider label="Top Left" name="containerBorderTopLeftRadius" value={formData.containerBorderTopLeftRadius} onChange={handleStyleChange} min="0" max="50" step="1" unit="px" />
+                                            <RangeSlider label="Top Right" name="containerBorderTopRightRadius" value={formData.containerBorderTopRightRadius} onChange={handleStyleChange} min="0" max="50" step="1" unit="px" />
+                                            <RangeSlider label="Bottom Right" name="containerBorderBottomRightRadius" value={formData.containerBorderBottomRightRadius} onChange={handleStyleChange} min="0" max="50" step="1" unit="px" />
+                                            <RangeSlider label="Bottom Left" name="containerBorderBottomLeftRadius" value={formData.containerBorderBottomLeftRadius} onChange={handleStyleChange} min="0" max="50" step="1" unit="px" />
+                                            <hr/>
+                                            <p className="text-sm font-semibold">Box Shadow</p>
+                                            <ColorPicker label="Color" name="boxShadowColor" value={formData.boxShadowColor} onChange={handleStyleChange} />
+                                            <RangeSlider label="H-Offset" name="boxShadowHOffset" value={formData.boxShadowHOffset} onChange={handleStyleChange} min="-20" max="20" step="1" unit="px" />
+                                            <RangeSlider label="V-Offset" name="boxShadowVOffset" value={formData.boxShadowVOffset} onChange={handleStyleChange} min="-20" max="20" step="1" unit="px" />
+                                            <RangeSlider label="Blur" name="boxShadowBlur" value={formData.boxShadowBlur} onChange={handleStyleChange} min="0" max="40" step="1" unit="px" />
+                                            <RangeSlider label="Spread" name="boxShadowSpread" value={formData.boxShadowSpread} onChange={handleStyleChange} min="-20" max="20" step="1" unit="px" />
+                                        </div>
+                                    </PopupAccordionItem>
+                                    <PopupAccordionItem title="Spacing" id="spacing">
+                                        <div className="space-y-4">
+                                            <p className="text-sm font-semibold">Padding</p>
+                                            <RangeSlider label="Top" name="paddingTop" value={formData.paddingTop} onChange={handleStyleChange} min="0" max="50" step="1" unit="px" />
+                                            <RangeSlider label="Right" name="paddingRight" value={formData.paddingRight} onChange={handleStyleChange} min="0" max="50" step="1" unit="px" />
+                                            <RangeSlider label="Bottom" name="paddingBottom" value={formData.paddingBottom} onChange={handleStyleChange} min="0" max="50" step="1" unit="px" />
+                                            <RangeSlider label="Left" name="paddingLeft" value={formData.paddingLeft} onChange={handleStyleChange} min="0" max="50" step="1" unit="px" />
+                                            <hr/>
+                                            <p className="text-sm font-semibold">Margin</p>
+                                            <RangeSlider label="Top" name="marginTop" value={formData.marginTop} onChange={handleStyleChange} min="0" max="50" step="1" unit="px" />
+                                            <RangeSlider label="Right" name="marginRight" value={formData.marginRight} onChange={handleStyleChange} min="0" max="50" step="1" unit="px" />
+                                            <RangeSlider label="Bottom" name="marginBottom" value={formData.marginBottom} onChange={handleStyleChange} min="0" max="50" step="1" unit="px" />
+                                            <RangeSlider label="Left" name="marginLeft" value={formData.marginLeft} onChange={handleStyleChange} min="0" max="50" step="1" unit="px" />
+                                        </div>
+                                    </PopupAccordionItem>
+                                     <PopupAccordionItem title="Labels" id="labels">
+                                        <div className="space-y-4">
+                                            <ColorPicker label="Text Color" name="labelColor" value={formData.labelColor} onChange={handleStyleChange} />
+                                            <RangeSlider label="Font Size" name="labelFontSize" value={formData.labelFontSize} onChange={handleStyleChange} min="8" max="24" step="1" unit="px" />
+                                        </div>
+                                    </PopupAccordionItem>
+                                     <PopupAccordionItem title="Inputs" id="inputs">
+                                        <div className="space-y-4">
+                                            <ColorPicker label="Background" name="inputBackgroundColor" value={formData.inputBackgroundColor} onChange={handleStyleChange} />
+                                            <ColorPicker label="Border" name="inputBorderColor" value={formData.inputBorderColor} onChange={handleStyleChange} />
+                                            <ColorPicker label="Text" name="inputTextColor" value={formData.inputTextColor} onChange={handleStyleChange} />
+                                            <RangeSlider label="Font Size" name="inputFontSize" value={formData.inputFontSize} onChange={handleStyleChange} min="8" max="24" step="1" unit="px" />
+                                             <hr/>
+                                            <p className="text-sm font-semibold">Border Radius</p>
+                                            <RangeSlider label="Top Left" name="inputBorderTopLeftRadius" value={formData.inputBorderTopLeftRadius} onChange={handleStyleChange} min="0" max="50" step="1" unit="px" />
+                                            <RangeSlider label="Top Right" name="inputBorderTopRightRadius" value={formData.inputBorderTopRightRadius} onChange={handleStyleChange} min="0" max="50" step="1" unit="px" />
+                                            <RangeSlider label="Bottom Right" name="inputBorderBottomRightRadius" value={formData.inputBorderBottomRightRadius} onChange={handleStyleChange} min="0" max="50" step="1" unit="px" />
+                                            <RangeSlider label="Bottom Left" name="inputBorderBottomLeftRadius" value={formData.inputBorderBottomLeftRadius} onChange={handleStyleChange} min="0" max="50" step="1" unit="px" />
+                                        </div>
+                                    </PopupAccordionItem>
                                 </div>
                             )}
 

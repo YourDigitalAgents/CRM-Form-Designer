@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 
 // Reusable component for a color picker with text input
 const ColorPicker = ({ label, name, value, onChange }) => (
-    <div>
+    <div onMouseDown={(e) => e.stopPropagation()}>
         <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
         <div className="flex items-center gap-2">
             <input 
@@ -28,7 +28,7 @@ const ColorPicker = ({ label, name, value, onChange }) => (
 
 // Reusable component for a range slider
 const RangeSlider = ({ label, name, value, onChange, min, max, step, unit = '' }) => (
-    <div>
+    <div onMouseDown={(e) => e.stopPropagation()}>
         <label htmlFor={name} className="block text-xs font-medium text-gray-600">{label}</label>
         <div className="flex items-center gap-2">
             <input
@@ -52,9 +52,10 @@ const FormPreview = React.memo(React.forwardRef(({ script, onElementClick, style
         <!DOCTYPE html>
         <html>
         <head>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
             <style id="form-styler-css"></style>
         </head>
-        <body style="margin:0; font-family: 'Inter', sans-serif;">
+        <body style="margin:0; font-family: 'Inter', sans-serif; background-color: transparent;">
             <div id="form-widget-container">
                 ${scriptContent}
             </div>
@@ -109,28 +110,26 @@ const FormPreview = React.memo(React.forwardRef(({ script, onElementClick, style
         const iframe = ref.current;
         const userHtml = script || `
             <form class="custom-form-container" onsubmit="event.preventDefault()">
-                <div class="form-group">
-                    <label for="name">First Name</label>
-                    <input type="text" id="name" placeholder="Enter your name" />
+                <div class="row">
+                    <div class="input-field col s12 m6 form-group">
+                        <input id="first_name" type="text" class="validate">
+                        <label for="first_name">First Name</label>
+                    </div>
+                    <div class="input-field col s12 m6 form-group">
+                        <input id="last_name" type="text" class="validate">
+                        <label for="last_name">Last Name</label>
+                    </div>
                 </div>
-                 <div class="form-group">
-                    <label for="last-name">Last Name</label>
-                    <input type="text" id="last-name" placeholder="Enter your last name" />
+                <div class="row">
+                    <div class="input-field col s12 form-group full-width-field">
+                        <textarea id="message" class="materialize-textarea"></textarea>
+                        <label for="message">Message</label>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="phone">Phone Number</label>
-                    <input type="tel" id="phone" placeholder="Enter your phone number" />
-                </div>
-                <div class="form-group">
-                    <label for="email">Email</label>
-                    <input type="email" id="email" placeholder="Enter your email" />
-                </div>
-                <div class="form-group full-width-field">
-                    <label for="message">Message</label>
-                    <textarea id="message" rows="4" placeholder="Your message..."></textarea>
-                </div>
-                <div class="form-group full-width-field">
-                    <input type="submit" class="btn btn-primary" value="Submit">
+                 <div class="row">
+                    <div class="input-field col s12 form-group full-width-field">
+                       <button class="btn waves-effect waves-light" type="submit" name="action">Submit</button>
+                    </div>
                 </div>
             </form>
         `;
@@ -243,6 +242,9 @@ const App = () => {
     const [showCodeModal, setShowCodeModal] = useState(false);
     const [copyMessage, setCopyMessage] = useState('');
     const iframeRef = useRef(null);
+    const [popupPosition, setPopupPosition] = useState({ top: 0, left: 0 });
+    const [isDragging, setIsDragging] = useState(false);
+    const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
     const handleStyleChange = (e) => {
         setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -280,12 +282,11 @@ const App = () => {
             type = 'button';
         }
         
-        setEditingTarget({
-            id,
-            type,
-            top: rect.top + previewPane.scrollTop,
-            left: rect.right + previewPane.scrollLeft + 10,
-        });
+        const top = rect.top + previewPane.scrollTop;
+        const left = rect.right + previewPane.scrollLeft + 10;
+
+        setEditingTarget({ id, type });
+        setPopupPosition({ top, left });
     }, []);
     
     const generateCss = useCallback(() => {
@@ -422,6 +423,39 @@ const App = () => {
         document.body.removeChild(textarea);
     };
 
+    const onDragStart = (e) => {
+        setIsDragging(true);
+        const popup = e.currentTarget.parentElement;
+        const rect = popup.getBoundingClientRect();
+        setDragOffset({
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top,
+        });
+    };
+
+    const onDrag = useCallback((e) => {
+        if (!isDragging) return;
+        setPopupPosition({
+            top: e.clientY - dragOffset.y,
+            left: e.clientX - dragOffset.x,
+        });
+    }, [isDragging, dragOffset]);
+
+    const onDragEnd = useCallback(() => {
+        setIsDragging(false);
+    }, []);
+
+    useEffect(() => {
+        if (isDragging) {
+            window.addEventListener('mousemove', onDrag);
+            window.addEventListener('mouseup', onDragEnd);
+        }
+        return () => {
+            window.removeEventListener('mousemove', onDrag);
+            window.removeEventListener('mouseup', onDragEnd);
+        };
+    }, [isDragging, onDrag, onDragEnd]);
+
     const PopupAccordionItem = ({ title, id, children }) => {
         const isOpen = activePopupTab === id;
         return (
@@ -479,14 +513,14 @@ const App = () => {
                 {editingTarget && (
                     <div 
                         className="fixed bg-white shadow-xl rounded-lg z-20 w-72 flex flex-col"
-                        style={{ top: editingTarget.top, left: editingTarget.left, resize: 'both', overflow: 'hidden', minWidth: '288px', minHeight: '300px', maxHeight: '90vh' }}
+                        style={{ top: popupPosition.top, left: popupPosition.left, resize: 'both', overflow: 'hidden', minWidth: '288px', minHeight: '300px', maxHeight: '90vh' }}
                     >
-                        <div className="p-2 border-b flex justify-between items-center cursor-move">
+                        <div onMouseDown={onDragStart} className="p-2 border-b flex justify-between items-center cursor-move">
                             <h4 className="text-sm font-bold capitalize">{editingTarget.type} Settings</h4>
                             <button onClick={() => setEditingTarget(null)} className="text-gray-500 hover:text-red-500 text-xl">&times;</button>
                         </div>
                         
-                        <div className="p-4 flex-grow overflow-y-auto custom-scrollbar">
+                        <div className="p-4 flex-grow overflow-y-auto custom-scrollbar" onMouseDown={(e) => e.stopPropagation()}>
                             {editingTarget.type === 'container' && (
                                 <div className="p-2">
                                     <PopupAccordionItem title="Container" id="container">

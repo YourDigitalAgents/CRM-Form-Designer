@@ -52,7 +52,7 @@ const FormPreview = React.memo(React.forwardRef(({ script, onElementClick, style
         <!DOCTYPE html>
         <html>
         <head>
-            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+            <script src="https://cdn.tailwindcss.com"></script>
             <style id="form-styler-css"></style>
         </head>
         <body style="margin:0; font-family: 'Inter', sans-serif; background-color: transparent;">
@@ -110,26 +110,28 @@ const FormPreview = React.memo(React.forwardRef(({ script, onElementClick, style
         const iframe = ref.current;
         const userHtml = script || `
             <form class="custom-form-container" onsubmit="event.preventDefault()">
-                <div class="row">
-                    <div class="input-field col s12 m6 form-group">
-                        <input id="first_name" type="text" class="validate">
-                        <label for="first_name">First Name</label>
-                    </div>
-                    <div class="input-field col s12 m6 form-group">
-                        <input id="last_name" type="text" class="validate">
-                        <label for="last_name">Last Name</label>
-                    </div>
+                <div class="form-group">
+                    <label for="name">First Name</label>
+                    <input type="text" id="name" placeholder="Enter your name" />
                 </div>
-                <div class="row">
-                    <div class="input-field col s12 form-group full-width-field">
-                        <textarea id="message" class="materialize-textarea"></textarea>
-                        <label for="message">Message</label>
-                    </div>
+                 <div class="form-group">
+                    <label for="last-name">Last Name</label>
+                    <input type="text" id="last-name" placeholder="Enter your last name" />
                 </div>
-                 <div class="row">
-                    <div class="input-field col s12 form-group full-width-field">
-                       <button class="btn waves-effect waves-light" type="submit" name="action">Submit</button>
-                    </div>
+                <div class="form-group">
+                    <label for="phone">Phone Number</label>
+                    <input type="tel" id="phone" placeholder="Enter your phone number" />
+                </div>
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" placeholder="Enter your email" />
+                </div>
+                <div class="form-group full-width-field">
+                    <label for="message">Message</label>
+                    <textarea id="message" rows="4" placeholder="Your message..."></textarea>
+                </div>
+                <div class="form-group full-width-field">
+                    <input type="submit" class="btn btn-primary" value="Submit">
                 </div>
             </form>
         `;
